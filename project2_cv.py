@@ -64,6 +64,11 @@ def labelAndWaitForKey(image, text):
     while fixKeyCode(cv2.waitKey(15)) < 0: pass
 
 def pyr_building(name):
+	"""
+	This function generates a LaPlacian pyramid.
+	A LaPlacian pyramid is one that encodes an image of successfully smaller LaPlacian images, built atop a base layer
+	consisting of a blurred and reduced copy of the original image.
+	"""
 
 	# result list of laplacian images
 	lp = []
@@ -108,6 +113,9 @@ def pyr_building(name):
 
 
 def show_image_32bit(img):
+	"""
+	This function is going to show an image that is passed in as a float32 data type image.
+	"""
 	cv2.imshow(window, 0.5 + 0.5*(img / np.abs(img).max()))
 	cv2.waitKey()
 
