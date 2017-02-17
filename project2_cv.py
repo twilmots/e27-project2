@@ -146,21 +146,33 @@ def pyr_reconstruct(lp):
 	r0 = r_prev.copy()
 	return r0
 
+def alpha_blend(A,B,alpha):
+	A = A.astype(alpha.dtype)
+	B = B.astype(alpha.dtype)
+
+	# if A and B are RGB images, we must pad out alpha to be the right shape
+	if len(A.shape) == 3:
+		alpha = np.expand_dims(alpha,2)
+	return A + alpha*(B-A)
+
 
 if __name__ == "__main__":
 	filename = raw_input("What file would you like to use? (0 for def): ")
 	if filename == '0':
 		fname = 'sunset.png'
 	print(fname)
+
 	# image = cv2.imread(fname)
 	# cv2.imshow('Window', image)
 	# cv2.waitKey()
+
 	lp_images = pyr_building(fname)
 	print("This is the length of lp: {}".format(len(lp_images)))
 	for image in lp_images:
 		print("This is the shape of our image: {}".format(image.shape))
 		show_image_32bit(image)
 	r0 = pyr_reconstruct(lp_images)
+
 	show_image_32bit(r0)
 
 
