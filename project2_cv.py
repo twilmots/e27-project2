@@ -175,4 +175,32 @@ if __name__ == "__main__":
 
 	show_image_32bit(r0)
 
+	imageA = cv2.imread('sunset.png')
+	imageB = cv2.imread('minority-report.png')
+	# Generating an alpha mask
+
+	height, width = imageA.shape[0:2]
+	mask = np.zeros((height, width), np.uint8)
+	center = (width/2, height/2)       # point specified as (x, y)
+	ellipse_size = (width/4, height/2) # size specified as (width, height)
+	rotation = 0                      # rotation angle, degrees
+	start_angle = 0
+	end_angle = 360
+	white = (255, 255, 255)            # RGB triple for pure white
+	line_style = -1                    # denotes filled ellipse
+
+	cv2.ellipse(mask, center,
+            ellipse_size, rotation,
+            start_angle, end_angle,
+            white, line_style)
+
+	# Make a Kernel before running the blur, i just got lazy and stopped working. 
+
+	cv2.GaussianBlur(mask)
+
+	labelAndWaitForKey(mask, 'Our Alpha-Mask')
+
+
+
+
 
