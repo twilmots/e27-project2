@@ -102,7 +102,7 @@ def pyr_building(name):
 			li = g_prev - g_next_up
 		else: 
 			# otherwise, we can just use g_n (l_n = g_n)
-			li = g_next
+			li = g_prev
 		
 		# let's make sure we go onto the next image
 		g_prev = g_next
@@ -110,7 +110,6 @@ def pyr_building(name):
 		# let's store our laplacian pyramid
 		lp.append(li)
 	return lp
-
 
 def show_image_32bit(img):
 	"""
@@ -126,6 +125,7 @@ def pyr_reconstruct(lp):
 	final_lp = lp[-1]
 	r_next = final_lp.copy()
 	for i in reversed(range(1,len(lp))):
+		# this is changing from n-1 to 1
 		print i
 		l_prev = lp[i-1]
 
@@ -137,11 +137,11 @@ def pyr_reconstruct(lp):
 
 		r_next_up = cv2.pyrUp(r_next, dstsize = (width, height))
 
-		r_prev = r_next_up + lp[i-1]
+		r_prev = r_next_up + l_prev
 
-		r_next = r_prev 
+		r_next = r_prev
 
-		show_image_32bit(rprev)
+		show_image_32bit(r_prev)
 
 	r0 = r_prev.copy()
 	return r0
@@ -158,6 +158,7 @@ if __name__ == "__main__":
 	lp_images = pyr_building(fname)
 	print("This is the length of lp: {}".format(len(lp_images)))
 	for image in lp_images:
+		print("This is the shape of our image: {}".format(image.shape))
 		show_image_32bit(image)
 	r0 = pyr_reconstruct(lp_images)
 	show_image_32bit(r0)
