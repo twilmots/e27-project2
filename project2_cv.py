@@ -119,6 +119,32 @@ def show_image_32bit(img):
 	cv2.imshow(window, 0.5 + 0.5*(img / np.abs(img).max()))
 	cv2.waitKey()
 
+def pyr_reconstruct(lp):
+	"""
+	This function takes in the LaPlacian pyramid list.
+	"""
+	final_lp = lp[-1]
+	r_next = final_lp.copy()
+	for i in reversed(range(1,len(lp))):
+		print i
+		l_prev = lp[i-1]
+
+		height, width = l_prev.shape[0:2]
+		print("This is the height: {} and width: {}".format(height, width))
+
+		rheight, rwidth = r_next.shape[0:2]
+		print("This is the rheight: {} and rwidth: {}".format(rheight, rwidth))
+
+		r_next_up = cv2.pyrUp(r_next, dstsize = (width, height))
+
+		r_prev = r_next_up + lp[i-1]
+
+		r_next = r_prev 
+
+		show_image_32bit(rprev)
+
+	r0 = r_prev.copy()
+	return r0
 
 
 if __name__ == "__main__":
@@ -130,7 +156,10 @@ if __name__ == "__main__":
 	# cv2.imshow('Window', image)
 	# cv2.waitKey()
 	lp_images = pyr_building(fname)
+	print("This is the length of lp: {}".format(len(lp_images)))
 	for image in lp_images:
 		show_image_32bit(image)
+	r0 = pyr_reconstruct(lp_images)
+	show_image_32bit(r0)
 
 
