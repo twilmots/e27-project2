@@ -126,7 +126,6 @@ def pyr_reconstruct(lp):
 	r_next = final_lp.copy()
 	for i in reversed(range(1,len(lp))):
 		# this is changing from n-1 to 1
-		print i
 		l_prev = lp[i-1]
 
 		# Let's get the ideal height. It should be double the size of 
@@ -174,14 +173,27 @@ def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
             start_angle, end_angle,
             white, line_style)
 
-	# Make a Kernel before running the blur, i just got lazy and stopped working. 
+	# Make a Kernel before running the blur
 	kernel_size = (5,5)
 
 	# NOTE: RIGHT NOW THIS IS JUST BLURRING OUR MASK...
 	# WE NEED TO DO THIS FOR LIKE EACH IMAGE IN OUR LP PYRAMID
-	mask = cv2.GaussianBlur(mask, kernel_size, 0)
+	alphamask = cv2.GaussianBlur(mask, kernel_size, 0)
 
-	labelAndWaitForKey(mask, 'Our Alpha-Mask')
+	# labelAndWaitForKey(alphamask, 'Our Alpha-Mask')
+	
+	lpA = pyr_building(imname1)
+	lpB = pyr_building(imname2)
+
+	for i in range(len(lpA)):
+		layerA = lpA[i]
+		layerB = lpB[i]
+		size = layerA.shape[0:2]
+
+		cv2.resize(alphamask, size, interpolation=cv2.INTER_AREA)
+	# x = alpha_blend(imageA,imageB,mask)
+
+	# labelAndWaitForKey(x,'Our blended image')
 
 
 if __name__ == "__main__":
