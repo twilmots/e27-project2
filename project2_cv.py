@@ -129,19 +129,18 @@ def pyr_reconstruct(lp):
 		print i
 		l_prev = lp[i-1]
 
+		# Let's get the ideal height. It should be double the size of 
+		# the original
 		height, width = l_prev.shape[0:2]
-		print("This is the height: {} and width: {}".format(height, width))
 
-		rheight, rwidth = r_next.shape[0:2]
-		print("This is the rheight: {} and rwidth: {}".format(rheight, rwidth))
-
+		# This is essentially r_i+1^+
 		r_next_up = cv2.pyrUp(r_next, dstsize = (width, height))
 
+		# We're just inverting the option above
 		r_prev = r_next_up + l_prev
 
+		# We want to keep reversing until we're at the beginning 
 		r_next = r_prev
-
-		show_image_32bit(r_prev)
 
 	r0 = r_prev.copy()
 	return r0
@@ -156,28 +155,9 @@ def alpha_blend(A,B,alpha):
 	return A + alpha*(B-A)
 
 
-if __name__ == "__main__":
-	filename = raw_input("What file would you like to use? (0 for def): ")
-	if filename == '0':
-		fname = 'sunset.png'
-	print(fname)
-
-	# image = cv2.imread(fname)
-	# cv2.imshow('Window', image)
-	# cv2.waitKey()
-
-	lp_images = pyr_building(fname)
-	print("This is the length of lp: {}".format(len(lp_images)))
-	for image in lp_images:
-		print("This is the shape of our image: {}".format(image.shape))
-		show_image_32bit(image)
-	r0 = pyr_reconstruct(lp_images)
-
-	show_image_32bit(r0)
-
-	imageA = cv2.imread('sunset.png')
-	imageB = cv2.imread('minority-report.png')
-	# Generating an alpha mask
+def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
+	imageA = cv2.imread(imname1)
+	imageB = cv2.imread(imname2)
 
 	height, width = imageA.shape[0:2]
 	mask = np.zeros((height, width), np.uint8)
@@ -195,10 +175,39 @@ if __name__ == "__main__":
             white, line_style)
 
 	# Make a Kernel before running the blur, i just got lazy and stopped working. 
+	kernel_size = (5,5)
 
-	cv2.GaussianBlur(mask)
+	# NOTE: RIGHT NOW THIS IS JUST BLURRING OUR MASK...
+	# WE NEED TO DO THIS FOR LIKE EACH IMAGE IN OUR LP PYRAMID
+	mask = cv2.GaussianBlur(mask, kernel_size, 0)
 
 	labelAndWaitForKey(mask, 'Our Alpha-Mask')
+
+
+if __name__ == "__main__":
+	filename = raw_input("What file would you like to use? (0 for def): ")
+	if filename == '0':
+		fname = 'sunset.png'
+	print(fname)
+
+	# Laplacian image pyramid list
+	lp_images = pyr_building(fname)
+
+	# How many images are in our laplacian pyramid list
+	print("Number of image in our Laplacian pyramid: {}".format(len(lp_images)))
+
+	# Just show all of them for convenience sake
+	for image in lp_images:
+		show_image_32bit(image)
+	r0 = pyr_reconstruct(lp_images)
+
+	# This is our image reconstructed... still in 32 bit
+	show_image_32bit(r0)
+
+	# Let's blend some images. This is the alpha blending.
+	image_blend()
+
+
 
 
 
