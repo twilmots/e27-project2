@@ -231,9 +231,10 @@ def hybrid(imageA = 'Einstein2.png', imageB = 'jolie.png'):
 	lopassA = lopass(imageA, sigmaA, kernel_size_A)
 
 	# hipass filter
-	hipassB = imageB - lopass(imageB, sigmaB, kernel_size_B)
+	hipassB = (imageB - lopass(imageB, sigmaB, kernel_size_B))
 
 	I = (kA * lopassA) + (kB * hipassB)
+	I = np.clip(I,0,255)
 
 	I = I.astype(np.uint8)
 
@@ -262,9 +263,11 @@ if __name__ == "__main__":
 	# # Showing our reconstructed image
 	# labelAndWaitForKey(r0,'Reconstructed')
 	
-	# # Let's blend some images. This is the alpha blending.
-	# image_blend()
+	# Let's blend some images. This is the alpha blending.
+	blendedimage = image_blend()
+	labelAndWaitForKey(blendedimage, 'Blended Image')
 
+	# Making a hybrid image between Angelina Jolie and Albert Einstein
 	hybrid = hybrid()
 	labelAndWaitForKey(hybrid, 'Hybrid Image')
 
