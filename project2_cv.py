@@ -179,21 +179,65 @@ def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 	# NOTE: RIGHT NOW THIS IS JUST BLURRING OUR MASK...
 	# WE NEED TO DO THIS FOR LIKE EACH IMAGE IN OUR LP PYRAMID
 	alphamask = cv2.GaussianBlur(mask, kernel_size, 0)
-
+	maximum = cv2.minMaxLoc(alphamask)
 	# labelAndWaitForKey(alphamask, 'Our Alpha-Mask')
 	
 	lpA = pyr_building(imname1)
 	lpB = pyr_building(imname2)
+
+	blendedimage = []
 
 	for i in range(len(lpA)):
 		layerA = lpA[i]
 		layerB = lpB[i]
 		size = layerA.shape[0:2]
 
-		cv2.resize(alphamask, size, interpolation=cv2.INTER_AREA)
-	# x = alpha_blend(imageA,imageB,mask)
+		alpharesized = cv2.resize(alphamask, (size[1],size[0]), interpolation=cv2.INTER_AREA)
 
-	# labelAndWaitForKey(x,'Our blended image')
+		x = alpha_blend(layerA,layerB,alpharesized)
+
+		blendedimage.append(x)
+
+	
+	blendedimage = pyr_reconstruct(blendedimage)
+	blendedimage = blendedimage.astype(np.uint8)
+
+	return blendedimage
+
+def lopass(img,sigma,kernel_size):
+	return cv2.GaussianBlur(img, kernel_size, sigma)
+
+def hybrid(imageA = 'Einstein2.png', imageB = 'jolie.png'):
+
+	# Preparing our images
+	imageA = cv2.imread(imageA)
+	imageA = cv2.cvtColor(imageA,cv2.COLOR_RGB2GRAY)
+	imageA = imageA.astype(np.float32)
+
+	imageB = cv2.imread(imageB)
+	imageB = cv2.cvtColor(imageB,cv2.COLOR_RGB2GRAY)
+	imageB = imageB.astype(np.float32)
+
+	# Setting our parameters
+	sigmaA = 25
+	sigmaB = 10
+	kA = 1
+	kB = 1
+
+	kernel_size_A = (35,35)
+	kernel_size_B = (5,5)
+
+	# lopass filter
+	lopassA = lopass(imageA, sigmaA, kernel_size_A)
+
+	# hipass filter
+	hipassB = imageB - lopass(imageB, sigmaB, kernel_size_B)
+
+	I = (kA * lopassA) + (kB * hipassB)
+
+	I = I.astype(np.uint8)
+
+	return I
 
 
 if __name__ == "__main__":
@@ -202,22 +246,29 @@ if __name__ == "__main__":
 		fname = 'sunset.png'
 	print(fname)
 
-	# Laplacian image pyramid list
-	lp_images = pyr_building(fname)
+	# # Laplacian image pyramid list
+	# lp_images = pyr_building(fname)
 
-	# How many images are in our laplacian pyramid list
-	print("Number of image in our Laplacian pyramid: {}".format(len(lp_images)))
+	# # How many images are in our laplacian pyramid list
+	# print("Number of image in our Laplacian pyramid: {}".format(len(lp_images)))
 
-	# Just show all of them for convenience sake
-	for image in lp_images:
-		show_image_32bit(image)
-	r0 = pyr_reconstruct(lp_images)
+	# # Just show all of them for convenience sake
+	# for image in lp_images:
+	# 	show_image_32bit(image)
+	# r0 = pyr_reconstruct(lp_images)
 
-	# This is our image reconstructed... still in 32 bit
-	show_image_32bit(r0)
+	# r0 = r0.astype(np.uint8)
 
-	# Let's blend some images. This is the alpha blending.
-	image_blend()
+	# # Showing our reconstructed image
+	# labelAndWaitForKey(r0,'Reconstructed')
+	
+	# # Let's blend some images. This is the alpha blending.
+	# image_blend()
+
+	hybrid = hybrid()
+	labelAndWaitForKey(hybrid, 'Hybrid Image')
+
+
 
 
 
