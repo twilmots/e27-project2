@@ -178,8 +178,20 @@ def pickPoints(window, image, filename, xcoord=0):
 
     return w.points
 
-def alignimages(A,B):
+def alignimages(imageA,imageB):
 	# Simple code to find homography in order to align our images
+	images = []
+	datafiles = []
+
+	pointsA = pickPoints('Image A', images[0], datafiles[0])
+	print('got pointsA =\n', pointsA)
+
+	pointsB = pickPoints('Image B', images[1], datafiles[1], xcoord=images[0].shape[1])
+	print('got pointsB =\n', pointsB)
+
+	# Using the two sets of points above to identify a homography
+	H = cv2.findHomography(pointsA,pointsB)
+
 	return 4
 
 def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
@@ -187,10 +199,10 @@ def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 	imageB = cv2.imread(imname2)
 
 	height, width = imageA.shape[0:2]
-	mask = np.zeros((height, width), np.float32)
+	mask = np.zeros((height, width), np.uint8)
 	center = (width/2, height/2)       # point specified as (x, y)
-	ellipse_size = (width/4, height/2) # size specified as (width, height)
-	rotation = 0                      # rotation angle, degrees
+	ellipse_size = (width/3, height/2) # size specified as (width, height)
+	rotation = 0                       # rotation angle, degrees
 	start_angle = 0
 	end_angle = 360
 	white = (255, 255, 255)            # RGB triple for pure white
@@ -199,21 +211,18 @@ def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 	cv2.ellipse(mask, center,
             ellipse_size, rotation,
             start_angle, end_angle,
-            white, line_style)
+            white, line_style, cv2.LINE_AA)
 
-	# Make a Kernel before running the blur
-	kernel_size = (11,11)
+	# specify sigma used in Gaussian blur
+	sigma = 10
 
-	# NOTE: RIGHT NOW THIS IS JUST BLURRING OUR MASK...
-	# WE NEED TO DO THIS FOR LIKE EACH IMAGE IN OUR LP PYRAMID
-	alphamask = cv2.GaussianBlur(mask, kernel_size, 0)
+	alphamask = cv2.GaussianBlur(mask, (0,0), sigma)
 
 	# Want to normalize our alpha mask in order to get intensities in range [0.0,1.0]
 	minval, maxval, minloc, maxloc = cv2.minMaxLoc(alphamask)
 
-	alphamask = alphamask/maxval
+	alphamask = alphamask.astype(np.float32)/maxval
 
-	# labelAndWaitForKey(alphamask, 'Our Alpha-Mask')
 	
 	lpA = pyr_building(imname1)
 	lpB = pyr_building(imname2)
@@ -281,30 +290,28 @@ if __name__ == "__main__":
 		fname = 'sunset.png'
 	print(fname)
 
-	# # Laplacian image pyramid list
-	# lp_images = pyr_building(fname)
+	# Laplacian image pyramid list
+	lp_images = pyr_building(fname)
 
-	# # How many images are in our laplacian pyramid list
-	# print("Number of image in our Laplacian pyramid: {}".format(len(lp_images)))
+	# Just show all of them for convenience sake
+	for image in lp_images:
+		show_image_32bit(image)
+	r0 = pyr_reconstruct(lp_images)
 
-	# # Just show all of them for convenience sake
-	# for image in lp_images:
-	# 	show_image_32bit(image)
-	# r0 = pyr_reconstruct(lp_images)
+	r0 = r0.astype(np.uint8)
 
-	# r0 = r0.astype(np.uint8)
-
-	# # Showing our reconstructed image
-	# labelAndWaitForKey(r0,'Reconstructed')
+	# Showing our reconstructed image
+	labelAndWaitForKey(r0,'Reconstructed')
 	
 	# Let's blend some images. This is the alpha blending.
 	blendedimage = image_blend()
 	labelAndWaitForKey(blendedimage, 'Blended Image')
-
+	cv2.imwrite('BlendedImage.png',blendedimage)
 
 	# Making a hybrid image between Angelina Jolie and Albert Einstein
 	hybrid = hybrid()
 	labelAndWaitForKey(hybrid, 'Hybrid Image')
+	cv2.imwrite('HybridImage.png', hybrid)
 
 
 
