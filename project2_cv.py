@@ -68,6 +68,7 @@ def pyr_building(name):
 	This function generates a LaPlacian pyramid.
 	A LaPlacian pyramid is one that encodes an image of successfully smaller LaPlacian images, built atop a base layer
 	consisting of a blurred and reduced copy of the original image.
+	This will also reduce until the coarsest level be about 8-16 pixels in its minimum dimension.
 	"""
 
 	# result list of laplacian images
@@ -78,7 +79,7 @@ def pyr_building(name):
 
 	# query the user for number of levels
 	# NOTE: it might be beneficial to just have this be a set calculated value
-	n = int(raw_input('Number of levels?: '))
+	#n = int(raw_input('Number of levels?: '))
 
 	# Initially call our original image g0
 	# we'll create the iterations following
@@ -87,8 +88,17 @@ def pyr_building(name):
 	# doing this for naming convention and to make sure we're not destorying anything
 	g_prev = g0.copy()
 
+	number_of_loops_needed = 1
+	temp_height, temp_width = g_prev.shape[0:2]
+	while min(temp_height, temp_width) > 16:
+		temp_height /= 2
+		temp_width  /= 2
+		number_of_loops_needed += 1
+
+	print("This is how many times we're going to iterate: {}".format(number_of_loops_needed))
+
 	# just iterating and creating our laplacian images
-	for i in range(n+1):
+	for i in range(number_of_loops_needed+1):
 		# use our pyrDown function
 		g_next = cv2.pyrDown(g_prev)
 
@@ -97,7 +107,7 @@ def pyr_building(name):
 		g_next_up = cv2.pyrUp(g_next, dstsize = (width, height))
 		
 		# if we're less than n
-		if i < n:
+		if i < number_of_loops_needed:
 			# we need to subtract off g_i - g_i+1^+
 			li = g_prev - g_next_up
 		else: 
@@ -153,6 +163,27 @@ def alpha_blend(A,B,alpha):
 		alpha = np.expand_dims(alpha,2)
 	return A + alpha*(B-A)
 
+def traditional_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
+	imageA = cv2.imread(imname1)
+	imageB = cv2.imread(imname2)
+
+	height, width = imageA.shape[0:2]
+	mask = np.zeros((height, width), np.uint8)
+	center = (width/2, height/2)       # point specified as (x, y)
+	ellipse_size = (width/4, height/2) # size specified as (width, height)
+	rotation = 0                      # rotation angle, degrees
+	start_angle = 0
+	end_angle = 360
+	white = (255, 255, 255)            # RGB triple for pure white
+	line_style = -1                    # denotes filled ellipse
+
+	cv2.ellipse(mask, center,
+            ellipse_size, rotation,
+            start_angle, end_angle,
+            white, line_style)
+
+	return mask
+
 
 def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 	imageA = cv2.imread(imname1)
@@ -191,9 +222,11 @@ def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 		size = layerA.shape[0:2]
 
 		cv2.resize(alphamask, size, interpolation=cv2.INTER_AREA)
-	# x = alpha_blend(imageA,imageB,mask)
+		cv2.imshow('win',alphamask)
+		cv2.waitKey()
+	x = alpha_blend(imageA,imageB,mask)
 
-	# labelAndWaitForKey(x,'Our blended image')
+	labelAndWaitForKey(x,'Our blended image')
 
 
 if __name__ == "__main__":
@@ -211,11 +244,15 @@ if __name__ == "__main__":
 	# Just show all of them for convenience sake
 	for image in lp_images:
 		show_image_32bit(image)
+
 	r0 = pyr_reconstruct(lp_images)
 
 	# This is our image reconstructed... still in 32 bit
 	show_image_32bit(r0)
 
+	# Let's get a shitty blend before using the pyramid
+	#rough_blend = traditional_blend()
+	#labelAndWaitForKey(rough_blend, 'Rough Blend')
 	# Let's blend some images. This is the alpha blending.
 	image_blend()
 
