@@ -20,6 +20,8 @@ import cv2
 import numpy as np
 import sys
 import cvk2
+import os
+import sys
 
 window = 'Window'
 def fixKeyCode(code):
@@ -111,13 +113,6 @@ def pyr_building(name):
 		lp.append(li)
 	return lp
 
-def show_image_32bit(img):
-	"""
-	This function is going to show an image that is passed in as a float32 data type image.
-	"""
-	cv2.imshow(window, 0.5 + 0.5*(img / np.abs(img).max()))
-	cv2.waitKey()
-
 def pyr_reconstruct(lp):
 	"""
 	This function takes in the LaPlacian pyramid list.
@@ -144,6 +139,13 @@ def pyr_reconstruct(lp):
 	r0 = r_prev.copy()
 	return r0
 
+def show_image_32bit(img):
+	"""
+	This function is going to show an image that is passed in as a float32 data type image.
+	"""
+	cv2.imshow(window, 0.5 + 0.5*(img / np.abs(img).max()))
+	cv2.waitKey()
+
 def alpha_blend(A,B,alpha):
 	A = A.astype(alpha.dtype)
 	B = B.astype(alpha.dtype)
@@ -153,13 +155,39 @@ def alpha_blend(A,B,alpha):
 		alpha = np.expand_dims(alpha,2)
 	return A + alpha*(B-A)
 
+def pickPoints(window, image, filename, xcoord=0):
+
+    cv2.namedWindow(window)
+    cv2.imshow(window, image)
+    cv2.moveWindow(window, xcoord, 0)
+    
+    w = cvk2.MultiPointWidget()
+
+    if w.load(filename):
+        print('loaded points from {}'.format(filename))
+    else:
+        print('could not load points from {}'.format(filename))
+
+    ok = w.start(window, image)
+
+    if not ok:
+        print('user canceled instead of picking points')
+        sys.exit(1)
+
+    w.save(filename)
+
+    return w.points
+
+def alignimages(A,B):
+	# Simple code to find homography in order to align our images
+	return 4
 
 def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 	imageA = cv2.imread(imname1)
 	imageB = cv2.imread(imname2)
 
 	height, width = imageA.shape[0:2]
-	mask = np.zeros((height, width), np.uint8)
+	mask = np.zeros((height, width), np.float32)
 	center = (width/2, height/2)       # point specified as (x, y)
 	ellipse_size = (width/4, height/2) # size specified as (width, height)
 	rotation = 0                      # rotation angle, degrees
@@ -174,12 +202,17 @@ def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
             white, line_style)
 
 	# Make a Kernel before running the blur
-	kernel_size = (5,5)
+	kernel_size = (11,11)
 
 	# NOTE: RIGHT NOW THIS IS JUST BLURRING OUR MASK...
 	# WE NEED TO DO THIS FOR LIKE EACH IMAGE IN OUR LP PYRAMID
 	alphamask = cv2.GaussianBlur(mask, kernel_size, 0)
-	maximum = cv2.minMaxLoc(alphamask)
+
+	# Want to normalize our alpha mask in order to get intensities in range [0.0,1.0]
+	minval, maxval, minloc, maxloc = cv2.minMaxLoc(alphamask)
+
+	alphamask = alphamask/maxval
+
 	# labelAndWaitForKey(alphamask, 'Our Alpha-Mask')
 	
 	lpA = pyr_building(imname1)
@@ -200,6 +233,7 @@ def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 
 	
 	blendedimage = pyr_reconstruct(blendedimage)
+	blendedimage = np.clip(blendedimage,0,255)
 	blendedimage = blendedimage.astype(np.uint8)
 
 	return blendedimage
@@ -266,6 +300,7 @@ if __name__ == "__main__":
 	# Let's blend some images. This is the alpha blending.
 	blendedimage = image_blend()
 	labelAndWaitForKey(blendedimage, 'Blended Image')
+
 
 	# Making a hybrid image between Angelina Jolie and Albert Einstein
 	hybrid = hybrid()
