@@ -204,24 +204,53 @@ def alignimages(imageA,imageB):
 
 	return 4
 
+def get_mask_from_image(image2name):
+	# NOTE: Image 2 
+	im = cv2.imread(image2name)
+	w = cvk2.RectWidget('ellipse')
+
+	# Start the interactive manipulation of the region.
+	result = w.start('Image', im)
+
+	if result: # If user hit enter
+
+		# Get a new copy of the image
+		image = cvk2.fetchimage(im)
+
+		# Make a grayscale mask based on the widget result
+		mask = np.zeros(im.shape[0:2], np.uint8)
+		w.drawMask(mask)
+
+		bmask = mask.view(np.bool)
+
+		image[~bmask] = 0
+
+		cv2.imshow('Image', image)
+		cv2.waitKey()
+
+	return mask
+
+
 def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 	imageA = cv2.imread(imname1)
 	imageB = cv2.imread(imname2)
 
-	height, width = imageA.shape[0:2]
-	mask = np.zeros((height, width), np.uint8)
-	center = (width/2, height/2)       # point specified as (x, y)
-	ellipse_size = (width/3, height/2) # size specified as (width, height)
-	rotation = 0                       # rotation angle, degrees
-	start_angle = 0
-	end_angle = 360
-	white = (255, 255, 255)            # RGB triple for pure white
-	line_style = -1                    # denotes filled ellipse
+	# height, width = imageA.shape[0:2]
+	# mask = np.zeros((height, width), np.uint8)
+	# center = (width/2, height/2)       # point specified as (x, y)
+	# ellipse_size = (width/3, height/2) # size specified as (width, height)
+	# rotation = 0                       # rotation angle, degrees
+	# start_angle = 0
+	# end_angle = 360
+	# white = (255, 255, 255)            # RGB triple for pure white
+	# line_style = -1                    # denotes filled ellipse
 
-	cv2.ellipse(mask, center,
-            ellipse_size, rotation,
-            start_angle, end_angle,
-            white, line_style, cv2.LINE_AA)
+	mask = get_mask_from_image(imname2)
+
+	# cv2.ellipse(mask, center,
+ #            ellipse_size, rotation,
+ #            start_angle, end_angle,
+ #            white, line_style, cv2.LINE_AA)
 
 	# specify sigma used in Gaussian blur
 	sigma = 10
