@@ -189,7 +189,6 @@ def alignImages(filenameA,filenameB):
 	# Simple code to find homography in order to align our images
 	im1 = cv2.imread(filenameA)
 	im2 = cv2.imread(filenameB)
-	polygons = []
 
 	# Create an image list
 	images = [im1, im2]
@@ -238,8 +237,6 @@ def alignImages(filenameA,filenameB):
 	pp = cv2.perspectiveTransform(p_0, H)
 	allpoints = np.vstack((allpoints, pp))
 	allpoints = np.vstack((allpoints, p_1))
-	polygons.append(pp)
-	polygons.append(p_1)
 	box = cv2.boundingRect(allpoints)
 
 	###################################################################
@@ -255,7 +252,7 @@ def alignImages(filenameA,filenameB):
 	Tnice[0,2] -= p0[0]
 	Tnice[1,2] -= p0[1]
 
-	originalTranslated = cv2.warpPerspective(images[1], Tnice, dims)
+	originalTranslated = cv2.warpPerspective(images[0], Tnice, dims)
 
 	labelAndWaitForKey(originalTranslated, 'trans')
 	return im1, originalTranslated
