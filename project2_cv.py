@@ -24,6 +24,9 @@ import os
 import sys
 
 window = 'Window'
+
+query_user = False
+
 def fixKeyCode(code):
 	# need this to fix our opencv bug
     return np.uint8(code).view(np.int8)
@@ -97,7 +100,7 @@ def pyr_building(name):
 		temp_width  /= 2
 		number_of_loops_needed += 1
 
-	print("This is how many times we're going to iterate: {}".format(number_of_loops_needed))
+	#print("This is how many times we're going to iterate: {}".format(number_of_loops_needed))
 
 	# just iterating and creating our laplacian images
 	for i in range(number_of_loops_needed+1):
@@ -136,6 +139,7 @@ def pyr_reconstruct(lp):
 		# Let's get the ideal height. It should be double the size of 
 		# the original
 		height, width = l_prev.shape[0:2]
+		#print("This is the height {} and width {}".format(height, width))
 
 		# This is essentially r_i+1^+
 		r_next_up = cv2.pyrUp(r_next, dstsize = (width, height))
@@ -235,22 +239,8 @@ def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 	imageA = cv2.imread(imname1)
 	imageB = cv2.imread(imname2)
 
-	# height, width = imageA.shape[0:2]
-	# mask = np.zeros((height, width), np.uint8)
-	# center = (width/2, height/2)       # point specified as (x, y)
-	# ellipse_size = (width/3, height/2) # size specified as (width, height)
-	# rotation = 0                       # rotation angle, degrees
-	# start_angle = 0
-	# end_angle = 360
-	# white = (255, 255, 255)            # RGB triple for pure white
-	# line_style = -1                    # denotes filled ellipse
-
+	# Let's ask the user for the appropriate region from image 2
 	mask = get_mask_from_image(imname2)
-
-	# cv2.ellipse(mask, center,
- #            ellipse_size, rotation,
- #            start_angle, end_angle,
- #            white, line_style, cv2.LINE_AA)
 
 	# specify sigma used in Gaussian blur
 	sigma = 10
@@ -344,7 +334,14 @@ if __name__ == "__main__":
 	labelAndWaitForKey(r0,'Reconstructed')
 	
 	# Let's blend some images. This is the alpha blending.
-	blendedimage = image_blend()
+	if query_user:
+		imname1 = raw_input('Enter the filename of image1: ')
+		imname2 = raw_input('Enter the filename of image2: ')
+		blendedimage = image_blend(imname1, imname2)
+	else:
+		blendedimage = image_blend()
+	
+	# Let's show the result
 	labelAndWaitForKey(blendedimage, 'Blended Image')
 	cv2.imwrite('BlendedImage.png',blendedimage)
 
