@@ -25,7 +25,7 @@ import sys
 
 window = 'Window'
 
-query_user = False
+query_user = True
 
 def fixKeyCode(code):
 	# need this to fix our opencv bug
@@ -169,7 +169,7 @@ def alpha_blend(A,B,alpha):
 		alpha = np.expand_dims(alpha,2)
 	return A + alpha*(B-A)
 
-def pickPoints(window, image, filename, xcoord=0):
+def pickPoints(window, image, xcoord=0):
 
     cv2.namedWindow(window)
     cv2.imshow(window, image)
@@ -177,40 +177,92 @@ def pickPoints(window, image, filename, xcoord=0):
     
     w = cvk2.MultiPointWidget()
 
-    if w.load(filename):
-        print('loaded points from {}'.format(filename))
-    else:
-        print('could not load points from {}'.format(filename))
-
     ok = w.start(window, image)
 
     if not ok:
         print('user canceled instead of picking points')
         sys.exit(1)
 
-    w.save(filename)
-
     return w.points
 
-def alignimages(imageA,imageB):
+def alignImages(filenameA,filenameB):
 	# Simple code to find homography in order to align our images
-	images = []
-	datafiles = []
+	im1 = cv2.imread(filenameA)
+	im2 = cv2.imread(filenameB)
+	polygons = []
 
-	pointsA = pickPoints('Image A', images[0], datafiles[0])
+	# Create an image list
+	images = [im1, im2]
+
+	pointsA = pickPoints('Image A', images[0])
 	print('got pointsA =\n', pointsA)
 
-	pointsB = pickPoints('Image B', images[1], datafiles[1], xcoord=images[0].shape[1])
+	pointsB = pickPoints('Image B', images[1], xcoord=images[0].shape[1])
 	print('got pointsB =\n', pointsB)
 
 	# Using the two sets of points above to identify a homography
-	H = cv2.findHomography(pointsA,pointsB)
+	homoxform = cv2.findHomography(pointsA,pointsB)
 
-	return 4
+	H = homoxform[0]
 
-def get_mask_from_image(image2name):
+	# Get its size 
+	height_image0, width_image0 = images[0].shape[:2]
+	size = (width_image0, height_image0)
+
+	warped = cv2.warpPerspective(images[0], H, size) # mapping the first image onto the second image
+
+	height_image1, width_image1 = images[1].shape[:2]
+
+	# Construct an array of points on the border of the image.
+	p_0 = np.array( [ [[ 0, 0 ]],
+	                   [[ width_image0, 0 ]],
+	                   [[ width_image0, height_image0 ]],
+	                   [[ 0, height_image0 ]] ], dtype='float32' )
+	p_1 = np.array( [ [[ 0, 0 ]],
+	                   [[ width_image1, 0 ]],
+	                   [[ width_image1, height_image1 ]],
+	                   [[ 0, height_image1 ]] ], dtype='float32' )
+
+
+	# Let's get the points for the bounds on our original image mapped through the homography 
+	# warp_points = cv2.warpPerspective(images[0], H, size)
+	# warped_points_pp = cv2.perspectiveTransform(warp_points, H)
+	# allpoints = np.vstack((allpoints, pp))
+
+	###################################################################
+	###################   Creating the Window #########################
+	###################################################################
+
+	# Let's get the points for our picture that we're mapping to
+	allpoints = np.empty( (0, 1, 2), dtype='float32' )
+	pp = cv2.perspectiveTransform(p_0, H)
+	allpoints = np.vstack((allpoints, pp))
+	allpoints = np.vstack((allpoints, p_1))
+	polygons.append(pp)
+	polygons.append(p_1)
+	box = cv2.boundingRect(allpoints)
+
+	###################################################################
+	###################   Stitching the Image Together ################
+	###################################################################
+
+	# Separate into dimensions and origin
+	dims = box[2:4]
+	p0 = box[0:2]
+
+	# Create translation transformation to shift image
+	Tnice = np.eye(3)
+	Tnice[0,2] -= p0[0]
+	Tnice[1,2] -= p0[1]
+
+	originalTranslated = cv2.warpPerspective(images[1], Tnice, dims)
+
+	labelAndWaitForKey(originalTranslated, 'trans')
+	return im1, originalTranslated
+
+def get_mask_from_image(image2):
 	# NOTE: Image 2 
-	im = cv2.imread(image2name)
+	im = image2
 	w = cvk2.RectWidget('ellipse')
 
 	# Start the interactive manipulation of the region.
@@ -236,11 +288,17 @@ def get_mask_from_image(image2name):
 
 
 def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
-	imageA = cv2.imread(imname1)
-	imageB = cv2.imread(imname2)
+
+	# Let's first algin our images
+	need_to_align = raw_input("Do the images need to be aligned? (y/n) ")
+	if need_to_align == 'y':
+		imageA, imageB = alignImages(imname1, imname2)
+	else:
+		imageA = cv2.imread(imname1)
+		imageB = cv2.imread(imname2)
 
 	# Let's ask the user for the appropriate region from image 2
-	mask = get_mask_from_image(imname2)
+	mask = get_mask_from_image(imageB)
 
 	# specify sigma used in Gaussian blur
 	sigma = 10
