@@ -25,7 +25,7 @@ import sys
 
 window = 'Window'
 
-query_user = True
+query_user = False
 
 def fixKeyCode(code):
 	# need this to fix our opencv bug
@@ -68,7 +68,7 @@ def labelAndWaitForKey(image, text):
     # Ctrl+C interrupt programs. This is a workaround.
     while fixKeyCode(cv2.waitKey(15)) < 0: pass
 
-def pyr_building(name):
+def pyr_building(im):
 	"""
 	This function generates a LaPlacian pyramid.
 	A LaPlacian pyramid is one that encodes an image of successfully smaller LaPlacian images, built atop a base layer
@@ -80,7 +80,7 @@ def pyr_building(name):
 	lp = []
 
 	# read in our original image
-	image = cv2.imread(name)
+	image = im
 
 	# query the user for number of levels
 	# NOTE: it might be beneficial to just have this be a set calculated value
@@ -126,6 +126,7 @@ def pyr_building(name):
 		lp.append(li)
 	return lp
 
+
 def pyr_reconstruct(lp):
 	"""
 	This function takes in the LaPlacian pyramid list.
@@ -153,6 +154,7 @@ def pyr_reconstruct(lp):
 	r0 = r_prev.copy()
 	return r0
 
+
 def show_image_32bit(img):
 	"""
 	This function is going to show an image that is passed in as a float32 data type image.
@@ -169,13 +171,17 @@ def alpha_blend(A,B,alpha):
 		alpha = np.expand_dims(alpha,2)
 	return A + alpha*(B-A)
 
-def pickPoints(window, image, xcoord=0):
+def pickPoints(window, image, filename, xcoord=0):
 
-    cv2.namedWindow(window)
     cv2.imshow(window, image)
     cv2.moveWindow(window, xcoord, 0)
     
     w = cvk2.MultiPointWidget()
+
+    if w.load(filename):
+        print('loaded points from {}'.format(filename))
+    else:
+        print('could not load points from {}'.format(filename))
 
     ok = w.start(window, image)
 
@@ -183,32 +189,60 @@ def pickPoints(window, image, xcoord=0):
         print('user canceled instead of picking points')
         sys.exit(1)
 
+    w.save(filename)
+
     return w.points
 
 def alignImages(filenameA,filenameB):
+	'''
+	This function ROUGHLY aligns the images. Note, you do need to pass in ONLY 
+	and exactly TWO points. They should be the eyes for a given face. 
+
+	This will create a translation matrix and then manipulate the first image, so that it maps onto
+	the second image.
+	'''
+
 	# Simple code to find homography in order to align our images
+	print("Please pick ONLY and EXACTLY two points, corresponding to the eyes of the face.")
 	im1 = cv2.imread(filenameA)
+	print filenameA
 	im2 = cv2.imread(filenameB)
+	print filenameB
+
+	datafiles = []
+	files = [filenameA, filenameB]
+	for myfile in files:
+		basename = os.path.basename(myfile)
+		prefix, _ = os.path.splitext(basename)
+		datafiles.append(prefix + '.txt')
 
 	# Create an image list
 	images = [im1, im2]
 
-	pointsA = pickPoints('Image A', images[0])
+	pointsA = pickPoints('Image A', images[0], datafiles[0])
 	print('got pointsA =\n', pointsA)
 
-	pointsB = pickPoints('Image B', images[1], xcoord=images[0].shape[1])
+	pointsB = pickPoints('Image B', images[1], datafiles[1], xcoord=images[0].shape[1])
 	print('got pointsB =\n', pointsB)
 
-	# Using the two sets of points above to identify a homography
-	homoxform = cv2.findHomography(pointsA,pointsB)
+	translation = pointsA - pointsB
+	xshift = np.average(translation[:,:,0])
+	yshift = np.average(translation[:,:,1])
 
-	H = homoxform[0]
+	print("This is translation: {}".format(translation))
+	print("This is xshift: {}".format(xshift))
+	print("This is yshift: {}".format(yshift))
+
+
+	# Create translation transformation to shift image
+	T = np.eye(3)
+	Tnice = np.eye(3)
+	Tnice[0,2] -= xshift
+	Tnice[1,2] -= yshift
 
 	# Get its size 
 	height_image0, width_image0 = images[0].shape[:2]
 	size = (width_image0, height_image0)
-
-	warped = cv2.warpPerspective(images[0], H, size) # mapping the first image onto the second image
 
 	height_image1, width_image1 = images[1].shape[:2]
 
@@ -234,7 +268,7 @@ def alignImages(filenameA,filenameB):
 
 	# Let's get the points for our picture that we're mapping to
 	allpoints = np.empty( (0, 1, 2), dtype='float32' )
-	pp = cv2.perspectiveTransform(p_0, H)
+	pp = cv2.perspectiveTransform(p_0, Tnice)
 	allpoints = np.vstack((allpoints, pp))
 	allpoints = np.vstack((allpoints, p_1))
 	box = cv2.boundingRect(allpoints)
@@ -247,19 +281,16 @@ def alignImages(filenameA,filenameB):
 	dims = box[2:4]
 	p0 = box[0:2]
 
-	# Create translation transformation to shift image
-	Tnice = np.eye(3)
-	Tnice[0,2] -= p0[0]
-	Tnice[1,2] -= p0[1]
+	trans = cv2.warpPerspective(images[0], Tnice, dims) # mapping the first image onto the second image
+	im2 = cv2.warpPerspective(im2, T, dims) # mapping second image to larger domain
+	labelAndWaitForKey(trans, 'trans')
 
-	originalTranslated = cv2.warpPerspective(images[0], Tnice, dims)
-
-	labelAndWaitForKey(originalTranslated, 'trans')
-	return im1, originalTranslated
+	return trans, im2
 
 def get_mask_from_image(image2):
 	# NOTE: Image 2 
-	im = image2
+	# THIS NEEDS TO BE A COPY
+	im = image2.copy()
 	w = cvk2.RectWidget('ellipse')
 
 	# Start the interactive manipulation of the region.
@@ -282,7 +313,6 @@ def get_mask_from_image(image2):
 		cv2.waitKey()
 
 	return mask
-
 
 def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 
@@ -307,9 +337,8 @@ def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 
 	alphamask = alphamask.astype(np.float32)/maxval
 
-	
-	lpA = pyr_building(imname1)
-	lpB = pyr_building(imname2)
+	lpA = pyr_building(imageA)
+	lpB = pyr_building(imageB)
 
 	blendedimage = []
 
@@ -375,7 +404,9 @@ if __name__ == "__main__":
 	print(fname)
 
 	# Laplacian image pyramid list
-	lp_images = pyr_building(fname)
+	im = cv2.imread(fname)
+
+	lp_images = pyr_building(im)
 
 	# Just show all of them for convenience sake
 	for image in lp_images:
@@ -404,6 +435,11 @@ if __name__ == "__main__":
 	hybrid = hybrid()
 	labelAndWaitForKey(hybrid, 'Hybrid Image')
 	cv2.imwrite('HybridImage.png', hybrid)
+
+	hybrid_list = pyr_building(hybrid)
+	for image in hybrid_list:
+		show_image_32bit(image)
+
 
 
 
