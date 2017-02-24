@@ -375,12 +375,12 @@ def hybrid(imageA = 'Einstein2.png', imageB = 'jolie.png'):
 	imageB = imageB.astype(np.float32)
 
 	# Setting our parameters
-	sigmaA = 25
-	sigmaB = 10
+	sigmaA = 10
+	sigmaB = 5
 	kA = 1
 	kB = 1
 
-	kernel_size_A = (35,35)
+	kernel_size_A = (39,39)
 	kernel_size_B = (5,5)
 
 	# lopass filter
@@ -439,13 +439,5 @@ if __name__ == "__main__":
 	hybrid_list = pyr_building(hybrid)
 	for image in hybrid_list:
 		show_image_32bit(image)
-
-
-
-
-
-
-
-
 
 
