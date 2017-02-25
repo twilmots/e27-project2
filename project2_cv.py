@@ -414,6 +414,7 @@ if __name__ == "__main__":
 	# Laplacian image pyramid list
 	im = cv2.imread(fname)
 
+	# Let's get our pyramid
 	lp_images = pyr_building(im)
 
 	# Just show all of them for convenience sake
@@ -426,7 +427,6 @@ if __name__ == "__main__":
 
 	# Showing our reconstructed image
 	labelAndWaitForKey(r0,'Reconstructed')
-	
 	
 	# Let's blend some images. This is the alpha blending.
 	if query_user:
