@@ -440,4 +440,15 @@ if __name__ == "__main__":
 	for image in hybrid_list:
 		show_image_32bit(image)
 
+	# # Let's do some testing with passing in a blurred image
+	# normal = cv2.imread('fox.png')
+	# blur = cv2.imread('fox_blur.png')
+	# norm_list = pyr_building(normal)
+	# blur_list = pyr_building(blur)
+
+
+	# for i in range(len(norm_list)):
+	# 	show_image_32bit(norm_list[i])
+	# 	show_image_32bit(blur_list[i])
+
 
