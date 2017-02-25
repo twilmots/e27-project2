@@ -82,10 +82,6 @@ def pyr_building(im):
 	# read in our original image
 	image = im
 
-	# query the user for number of levels
-	# NOTE: it might be beneficial to just have this be a set calculated value
-	#n = int(raw_input('Number of levels?: '))
-
 	# Initially call our original image g0
 	# we'll create the iterations following
 	g0 = image.astype(np.float32)
@@ -93,6 +89,7 @@ def pyr_building(im):
 	# doing this for naming convention and to make sure we're not destorying anything
 	g_prev = g0.copy()
 
+	# This is where we determine the number of levels of our Laplacian Pyramid
 	number_of_loops_needed = 1
 	temp_height, temp_width = g_prev.shape[0:2]
 	while min(temp_height, temp_width) > 16:
@@ -100,7 +97,6 @@ def pyr_building(im):
 		temp_width  /= 2
 		number_of_loops_needed += 1
 
-	#print("This is how many times we're going to iterate: {}".format(number_of_loops_needed))
 
 	# just iterating and creating our laplacian images
 	for i in range(number_of_loops_needed+1):
@@ -327,6 +323,7 @@ def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 	# Let's ask the user for the appropriate region from image 2
 	mask = get_mask_from_image(imageB)
 
+
 	# specify sigma used in Gaussian blur
 	sigma = 10
 
@@ -337,9 +334,15 @@ def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 
 	alphamask = alphamask.astype(np.float32)/maxval
 
+	# traditional alpha blend not using the pyramids
+
+	traditional = alpha_blend(imageA, imageB, alphamask)
+	cv2.imwrite('TraditionalBlend.png',traditional)
+
 	lpA = pyr_building(imageA)
 	lpB = pyr_building(imageB)
 
+	# going to store blends of the levels of the laplacian pyramid
 	blendedimage = []
 
 	for i in range(len(lpA)):
@@ -353,8 +356,9 @@ def image_blend(imname1 = 'sunset.png', imname2 = 'minority-report.png'):
 
 		blendedimage.append(x)
 
-	
+	# recontructing the stored blends of the laplacian pyramid
 	blendedimage = pyr_reconstruct(blendedimage)
+
 	blendedimage = np.clip(blendedimage,0,255)
 	blendedimage = blendedimage.astype(np.uint8)
 
@@ -380,6 +384,7 @@ def hybrid(imageA = 'Einstein2.png', imageB = 'jolie.png'):
 	kA = 1
 	kB = 1
 
+	# determing kernel size for the GaussianBlur filter
 	kernel_size_A = (39,39)
 	kernel_size_B = (5,5)
 
@@ -389,7 +394,10 @@ def hybrid(imageA = 'Einstein2.png', imageB = 'jolie.png'):
 	# hipass filter
 	hipassB = (imageB - lopass(imageB, sigmaB, kernel_size_B))
 
+	# generating the hybrid image
 	I = (kA * lopassA) + (kB * hipassB)
+	
+	# clipping before turning back into unit8 to avoid overflow
 	I = np.clip(I,0,255)
 
 	I = I.astype(np.uint8)
@@ -419,6 +427,7 @@ if __name__ == "__main__":
 	# Showing our reconstructed image
 	labelAndWaitForKey(r0,'Reconstructed')
 	
+	
 	# Let's blend some images. This is the alpha blending.
 	if query_user:
 		imname1 = raw_input('Enter the filename of image1: ')
@@ -436,6 +445,7 @@ if __name__ == "__main__":
 	labelAndWaitForKey(hybrid, 'Hybrid Image')
 	cv2.imwrite('HybridImage.png', hybrid)
 
+	# Showing the laplacian pyramid for the hybrid image
 	hybrid_list = pyr_building(hybrid)
 	for image in hybrid_list:
 		show_image_32bit(image)
